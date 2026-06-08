@@ -1,0 +1,21 @@
+name: AWS OIDC Test
+
+on:
+  workflow_dispatch: # Allows you to trigger the test manually from the UI
+
+permissions:
+  id-token: write    # MANDATORY: Allows the job to request the OIDC JWT token
+  contents: read     # Standard checkout permission
+
+jobs:
+  whoami:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: eu-east-1
+
+      - name: Verify Identity
+        run: aws sts get-caller-identity
