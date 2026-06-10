@@ -6,8 +6,6 @@ terraform {
       version = ">= 5.0"
     }
   }
-
-  # Configured with your explicit S3 Bucket, Region, and DynamoDB State Lock Table
   backend "s3" {
     bucket         = "service-tf-state-us-east-1-202373502174-us-east-1-an"
     key            = "envs/dev/terraform.tfstate"
@@ -21,7 +19,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-# 1. Base Custom VPC Networking (Allocated dynamically across us-east-1 AZs)
 module "vpc" {
   source       = "../../modules/vpc"
   project_name = var.project_name
@@ -29,7 +26,6 @@ module "vpc" {
   tags         = var.global_tags
 }
 
-# 2. Strict Micro-segmented Security Groups
 module "security" {
   source       = "../../modules/security"
   vpc_id       = module.vpc.vpc_id
@@ -37,7 +33,6 @@ module "security" {
   environment  = var.environment
 }
 
-# 3. Isolated Persistence Database Layer
 module "db" {
   source                = "../../modules/db"
   vpc_id                = module.vpc.vpc_id
@@ -48,7 +43,6 @@ module "db" {
   tags                  = var.global_tags
 }
 
-# 4. Asynchronous Event-Streaming Layer (AWS MSK Kafka)
 module "messaging" {
   source                = "../../modules/messaging"
   private_subnets       = module.vpc.private_subnets
