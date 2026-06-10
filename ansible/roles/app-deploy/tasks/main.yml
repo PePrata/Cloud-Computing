@@ -1,0 +1,20 @@
+---
+- name: Initialize Active Sandbox Directory Workspace Structure
+  file:
+    path: "/opt/shop"
+    state: directory
+    mode: '0755'
+    owner: ec2-user
+
+- name: Authenticate Runtime Host Daemon to Amazon ECR Image Registry
+  shell: "aws ecr get-login-password --region {{ aws_region }} | docker login --username AWS --password-stdin {{ ecr_registry_url }}"
+
+- name: Populate Local Processing Variable Environments File Mapping
+  template:
+    src: docker-compose.yml.j2
+    dest: /opt/shop/docker-compose.yml
+    mode: '0600'
+    owner: ec2-user
+
+- name: Trigger Rolling Standby Stack Instantiation And Await Active Verification Signals
+  shell: "docker compose -f /opt/shop/docker-compose.yml up -d --wait --remove-orphans"

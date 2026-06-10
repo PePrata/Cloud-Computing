@@ -8,7 +8,7 @@ terraform {
   }
   backend "s3" {
     bucket         = "service-tf-state-us-east-1-202373502174-us-east-1-an"
-    key            = "envs/dev/terraform.tfstate"
+    key            = "environments/dev/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "service-tf-locks"
     encrypt        = true
@@ -41,6 +41,8 @@ module "db" {
   project_name          = var.project_name
   environment           = var.environment
   tags                  = var.global_tags
+  db_username           = var.db_username
+  db_password           = var.db_password
 }
 
 module "messaging" {
@@ -52,11 +54,12 @@ module "messaging" {
   tags                  = var.global_tags
 }
 
-# AUTOMATED ANSIBLE INVENTORY GENERATION
 resource "local_file" "ansible_vars" {
   content = templatefile("${path.module}/templates/all.yml.tpl", {
     rds_endpoint = module.db.rds_endpoint
     msk_brokers  = module.messaging.bootstrap_brokers
+    db_username  = var.db_username
+    db_password  = var.db_password
   })
   filename = "../../../ansible/inventory/group_vars/all.yml"
 }

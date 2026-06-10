@@ -5,7 +5,7 @@ image_tag: "latest"
 
 db_host: "${rds_endpoint}"
 db_name: "shop_master"
-db_username: "dbadmin"
-db_password: "SecureStudentPass123!"
+db_username: "${db_username}"
+db_password: "${db_password}"
 
 kafka_brokers: "${msk_brokers}"

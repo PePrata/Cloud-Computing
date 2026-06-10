@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  user-service:
+    image: "{{ ecr_registry_url }}/shop-user-service:{{ image_tag }}"
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://{{ db_host }}/{{ db_name }}
+      - SPRING_DATASOURCE_USERNAME={{ db_username }}
+      - SPRING_DATASOURCE_PASSWORD={{ db_password }}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: always
+
+  product-service:
+    image: "{{ ecr_registry_url }}/shop-product-service:{{ image_tag }}"
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://{{ db_host }}/{{ db_name }}
+      - SPRING_DATASOURCE_USERNAME={{ db_username }}
+      - SPRING_DATASOURCE_PASSWORD={{ db_password }}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS={{ kafka_brokers }}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: always
+
+  order-service:
+    image: "{{ ecr_registry_url }}/shop-order-service:{{ image_tag }}"
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://{{ db_host }}/{{ db_name }}
+      - SPRING_DATASOURCE_USERNAME={{ db_username }}
+      - SPRING_DATASOURCE_PASSWORD={{ db_password }}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS={{ kafka_brokers }}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: always
+
+  api-gateway:
+    image: "{{ ecr_registry_url }}/shop-api-gateway:{{ image_tag }}"
+    ports:
+      - "8080:8080"
+    environment:
+      - USER_SERVICE_URL=http://user-service:8081
+      - PRODUCT_SERVICE_URL=http://product-service:8082
+      - ORDER_SERVICE_URL=http://order-service:8083
+    depends_on:
+      user-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: always

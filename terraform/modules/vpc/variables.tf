@@ -1,6 +1,5 @@
 variable "project_name" {
   type        = string
-  description = "A global organizational string used to preface cluster elements."
 }
 
 variable "environment" {

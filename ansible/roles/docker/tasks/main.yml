@@ -1,0 +1,20 @@
+---
+- name: Install Container Platform Engine Via Native DNF (Amazon Linux 2023 Compliance)
+  dnf:
+    name:
+      - docker
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
+
+- name: Launch Container Lifecycle Daemon Engine
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Append Pipeline Execution Account to Local Daemon Socket Access Group
+  user:
+    name: ec2-user
+    groups: docker
+    append: yes

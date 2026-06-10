@@ -1,7 +1,3 @@
-variable "project_name" { type = string }
-variable "environment"  { type = string }
-variable "tags"         { type = map(string) }
-
 data "aws_availability_zones" "available" {
   state = "available"
 }

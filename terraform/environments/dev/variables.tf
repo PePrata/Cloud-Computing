@@ -16,6 +16,16 @@ variable "project_name" {
   default     = "shop"
 }
 
+variable "db_username" {
+  type      = string
+  sensitive = true
+}
+
+variable "db_password" {
+  type      = string
+  sensitive = true
+}
+
 variable "global_tags" {
   type        = map(string)
   description = "Mandatory evaluation metadata tags."

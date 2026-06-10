@@ -23,6 +23,14 @@ variable "environment" {
   description = "The targeted runtime system configuration environment string."
 }
 
+variable "db_username" { 
+  type = string 
+}
+
+variable "db_password" { 
+  type = string
+ }
+
 variable "tags" {
   type        = map(string)
   description = "A mapping configuration block assigning resource ownership metadata metadata tags."

@@ -1,0 +1,8 @@
+---
+- name: Core Node Configuration And Container Task Orchestration
+  hosts: app_servers
+  become: yes
+  gather_facts: yes
+  roles:
+    - docker
+    - app-deploy
