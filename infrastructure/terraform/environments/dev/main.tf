@@ -57,3 +57,19 @@ module "messaging" {
   environment           = var.environment
   tags                  = var.global_tags
 }
+
+# AUTOMATED ANSIBLE INVENTORY GENERATION
+resource "local_file" "ansible_vars" {
+  content = templatefile("${path.module}/templates/all.yml.tpl", {
+    rds_endpoint = module.db.rds_endpoint
+    msk_brokers  = module.messaging.bootstrap_brokers
+  })
+  filename = "../../../ansible/inventory/group_vars/all.yml"
+}
+
+resource "local_file" "ansible_hosts" {
+  content = templatefile("${path.module}/templates/hosts.ini.tpl", {
+    ec2_public_ip = module.vpc.ec2_public_ip
+  })
+  filename = "../../../ansible/inventory/hosts.ini"
+}
