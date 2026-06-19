@@ -21,5 +21,3 @@ resource "aws_db_instance" "postgres" {
   publicly_accessible    = false
   tags                   = var.tags
 }
-
-output "rds_endpoint" { value = aws_db_instance.postgres.endpoint }
