@@ -34,7 +34,7 @@ jobs:
       - name: Initialize Terraform Platform Engine
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.7
+          terraform_version: 1.9.5
 
       - name: Dry-Run Verification (Lint & Plan execution)
         run: |
