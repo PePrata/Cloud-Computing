@@ -28,7 +28,7 @@ jobs:
       - name: Authenticate to AWS Cloud via OIDC Broker
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::202373502174:role/github-actions-ops-role
+          role-to-assume: arn:aws:iam::202373502174:role/gha-deployer
           aws-region: us-east-1
 
       - name: Initialize Terraform Platform Engine
