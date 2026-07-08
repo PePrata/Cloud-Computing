@@ -14,6 +14,6 @@ output "msk_bootstrap_brokers" {
 }
 
 output "ec2_public_ip" {
-  value       = module.vpc.ec2_public_ip
+  value       = module.compute.public_ip
   description = "EC2 public IP — used by deploy.yml to update the Ansible hosts.ini before the playbook runs."
 }
