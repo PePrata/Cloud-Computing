@@ -26,6 +26,11 @@ variable "db_password" {
   sensitive = true
 }
 
+variable "key_name" {
+  type        = string
+  description = "Name of an EC2 key pair that already exists in AWS. Its private half must match the ANSIBLE_SSH_KEY GitHub secret."
+}
+
 variable "global_tags" {
   type        = map(string)
   description = "Mandatory evaluation metadata tags."
