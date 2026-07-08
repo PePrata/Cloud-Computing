@@ -54,6 +54,22 @@ module "messaging" {
   tags                  = var.global_tags
 }
 
+module "compute" {
+  source           = "../../modules/compute"
+  vpc_id           = module.vpc.vpc_id
+  public_subnet_id = module.vpc.public_subnets[0]
+  project_name     = var.project_name
+  environment      = var.environment
+  key_name         = var.key_name
+  tags             = var.global_tags
+  security_group_ids = [
+    module.security.api_gateway_security_group_id,
+    module.security.user_service_security_group_id,
+    module.security.product_service_security_group_id,
+    module.security.order_service_security_group_id,
+  ]
+}
+
 resource "local_file" "ansible_vars" {
   content = templatefile("${path.module}/templates/all.yml.tpl", {
     rds_endpoint = module.db.rds_endpoint
@@ -66,7 +82,7 @@ resource "local_file" "ansible_vars" {
 
 resource "local_file" "ansible_hosts" {
   content = templatefile("${path.module}/templates/hosts.ini.tpl", {
-    ec2_public_ip = module.vpc.ec2_public_ip
+    ec2_public_ip = module.vpc.compute.public_ip
   })
   filename = "../../../ansible/inventory/hosts.ini"
 }
