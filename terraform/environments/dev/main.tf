@@ -82,7 +82,7 @@ resource "local_file" "ansible_vars" {
 
 resource "local_file" "ansible_hosts" {
   content = templatefile("${path.module}/templates/hosts.ini.tpl", {
-    ec2_public_ip = module.vpc.compute.public_ip
+    ec2_public_ip = module.compute.public_ip
   })
   filename = "../../../ansible/inventory/hosts.ini"
 }
