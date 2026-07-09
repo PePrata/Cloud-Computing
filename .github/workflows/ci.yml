@@ -8,6 +8,10 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: terraform-dev
+  cancel-in-progress: false
+
 jobs:
   test-and-validate:
     runs-on: ubuntu-latest
@@ -28,7 +32,7 @@ jobs:
       - name: Authenticate to AWS Cloud via OIDC Broker
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::202373502174:role/gha-deployer
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: us-east-1
 
       - name: Initialize Terraform Platform Engine
@@ -37,6 +41,10 @@ jobs:
           terraform_version: 1.9.5
 
       - name: Dry-Run Verification (Lint & Plan execution)
+        env:
+          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+          TF_VAR_key_name: ${{ secrets.EC2_KEY_NAME }}
         run: |
           cd terraform/environments/dev
           terraform init

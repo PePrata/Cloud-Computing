@@ -8,6 +8,10 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: terraform-dev
+  cancel-in-progress: false
+
 jobs:
   deploy-stack:
     runs-on: ubuntu-latest
@@ -18,7 +22,7 @@ jobs:
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::202373502174:role/gha-deployer
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: us-east-1
 
       - name: Setup Terraform
@@ -30,6 +34,7 @@ jobs:
         env:
           TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+          TF_VAR_key_name: ${{ secrets.EC2_KEY_NAME }}
         run: |
           cd terraform/environments/dev
           terraform init
