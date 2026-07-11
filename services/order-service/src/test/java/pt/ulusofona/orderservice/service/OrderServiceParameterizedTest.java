@@ -33,7 +33,7 @@ class OrderServiceParameterizedTest {
     private pt.ulusofona.orderservice.client.ProductServiceClient productServiceClient;
 
     @Mock
-    private org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
+    private io.awspring.cloud.sqs.operations.SqsTemplate sqsTemplate;
 
     @InjectMocks
     private OrderService orderService;

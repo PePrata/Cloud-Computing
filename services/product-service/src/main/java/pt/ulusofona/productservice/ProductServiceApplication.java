@@ -2,7 +2,6 @@ package pt.ulusofona.productservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.kafka.annotation.EnableKafka;
 
 /**
  * Main application class for the Product Service microservice.
@@ -12,26 +11,28 @@ import org.springframework.kafka.annotation.EnableKafka;
  * <ul>
  *   <li>Spring Data JPA for database access</li>
  *   <li>Spring Web for REST API endpoints</li>
- *   <li>Spring Kafka for consuming events from Order Service</li>
+ *   <li>Spring Cloud AWS (SQS) for consuming events from Order Service</li>
  *   <li>H2 in-memory database for development</li>
  *   <li>Spring Boot Actuator for health checks and monitoring</li>
  * </ul>
  * 
- * <p>The service consumes Kafka events from the Order Service to:
+ * <p>The service consumes SQS events from the Order Service to:
  * <ul>
  *   <li>Update inventory when orders are created</li>
  *   <li>React to order status changes</li>
  * </ul>
+ * 
+ * <p>Unlike Spring Kafka, Spring Cloud AWS's SQS starter auto-configures its
+ * {@code @SqsListener} infrastructure from the starter dependency alone — no
+ * {@code @EnableSqs}-style annotation is needed here.
  * 
  * <p>The service runs on port 8082 by default (configured in application.yml).
  * 
  * @author Cloud Computing Course
  * @version 1.0.0
  * @since 1.0.0
- * @see org.springframework.kafka.annotation.EnableKafka
  */
 @SpringBootApplication
-@EnableKafka
 public class ProductServiceApplication {
 
     /**
@@ -43,7 +44,8 @@ public class ProductServiceApplication {
      * 
      * <p>Prerequisites:
      * <ul>
-     *   <li>Kafka must be running on localhost:9092 (or configured in application.yml)</li>
+     *   <li>Valid AWS credentials/region resolvable (env vars locally, or the
+     *       EC2 instance profile once deployed) so the SQS client can connect</li>
      * </ul>
      * 
      * @param args Command line arguments passed to the application

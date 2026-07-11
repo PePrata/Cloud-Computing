@@ -9,9 +9,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Kafka event published when a new order is created.
+ * SQS event published when a new order is created.
  * 
- * <p>This event is published to the "order-created" Kafka topic whenever
+ * <p>This event is sent to the "order-created" SQS queue whenever
  * a new order is successfully created. Other services can subscribe to
  * this topic to react to order creation events.
  * 

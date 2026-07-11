@@ -3,7 +3,6 @@ package pt.ulusofona.orderservice;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
-import org.springframework.kafka.annotation.EnableKafka;
 
 /**
  * Main application class for the Order Service microservice.
@@ -13,7 +12,7 @@ import org.springframework.kafka.annotation.EnableKafka;
  * <ul>
  *   <li>Spring Data JPA for database access</li>
  *   <li>Spring Web for REST API endpoints</li>
- *   <li>Spring Kafka for asynchronous messaging</li>
+ *   <li>Spring Cloud AWS (SQS) for asynchronous messaging</li>
  *   <li>OpenFeign for synchronous inter-service communication</li>
  *   <li>H2 in-memory database for development</li>
  *   <li>Spring Boot Actuator for health checks and monitoring</li>
@@ -23,9 +22,13 @@ import org.springframework.kafka.annotation.EnableKafka;
  * <ul>
  *   <li><b>Synchronous (OpenFeign):</b> Calls to User Service and Product Service
  *       to validate orders and fetch product information</li>
- *   <li><b>Asynchronous (Kafka):</b> Publishes events when orders are created or
+ *   <li><b>Asynchronous (SQS):</b> Publishes events when orders are created or
  *       status changes, allowing other services to react to these events</li>
  * </ul>
+ * 
+ * <p>Unlike Spring Kafka, Spring Cloud AWS's SQS starter auto-configures its
+ * listener/producer infrastructure from the starter dependency alone — no
+ * {@code @EnableSqs}-style annotation is needed here.
  * 
  * <p>The service runs on port 8083 by default (configured in application.yml).
  * 
@@ -33,11 +36,9 @@ import org.springframework.kafka.annotation.EnableKafka;
  * @version 1.0.0
  * @since 1.0.0
  * @see org.springframework.cloud.openfeign.EnableFeignClients
- * @see org.springframework.kafka.annotation.EnableKafka
  */
 @SpringBootApplication
 @EnableFeignClients
-@EnableKafka
 public class OrderServiceApplication {
 
     /**
@@ -49,7 +50,8 @@ public class OrderServiceApplication {
      * 
      * <p>Prerequisites:
      * <ul>
-     *   <li>Kafka must be running on localhost:9092 (or configured in application.yml)</li>
+     *   <li>Valid AWS credentials/region resolvable (env vars locally, or the
+     *       EC2 instance profile once deployed) so the SQS client can connect</li>
      *   <li>User Service should be running on localhost:8081</li>
      *   <li>Product Service should be running on localhost:8082</li>
      * </ul>
@@ -60,4 +62,3 @@ public class OrderServiceApplication {
         SpringApplication.run(OrderServiceApplication.class, args);
     }
 }
-

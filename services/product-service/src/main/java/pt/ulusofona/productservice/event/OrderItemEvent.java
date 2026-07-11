@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
 /**
- * Represents an order item in a Kafka event.
+ * Represents an order item in an SQS event.
  * 
  * @author Cloud Computing Course
  * @version 1.0.0

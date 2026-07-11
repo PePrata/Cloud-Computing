@@ -8,9 +8,9 @@ import pt.ulusofona.orderservice.model.OrderStatus;
 import java.time.LocalDateTime;
 
 /**
- * Kafka event published when an order status changes.
+ * SQS event published when an order status changes.
  * 
- * <p>This event is published to the "order-status-changed" Kafka topic whenever
+ * <p>This event is sent to the "order-status-changed" SQS queue whenever
  * an order's status is updated. Other services can subscribe to this topic to
  * react to status changes.
  * 

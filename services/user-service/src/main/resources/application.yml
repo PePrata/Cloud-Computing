@@ -55,5 +55,4 @@ logging:
   level:
     pt.ulusofona.userservice: DEBUG
     org.springframework.web: INFO
-    org.springframework.kafka: INFO
 

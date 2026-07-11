@@ -2,7 +2,7 @@ package pt.ulusofona.orderservice.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
+import io.awspring.cloud.sqs.operations.SqsTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pt.ulusofona.orderservice.client.ProductResponse;
@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
  *   <li>Creating orders with validation via OpenFeign</li>
  *   <li>Updating order status</li>
  *   <li>Retrieving orders</li>
- *   <li>Publishing Kafka events for order lifecycle</li>
+ *   <li>Publishing SQS events for order lifecycle</li>
  * </ul>
  * 
  * <p>The service uses OpenFeign clients to communicate synchronously with:
@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
  *   <li>Product Service - to validate products and fetch product details</li>
  * </ul>
  * 
- * <p>The service publishes Kafka events for:
+ * <p>The service publishes SQS events for:
  * <ul>
  *   <li>Order creation - published to "order-created" topic</li>
  *   <li>Status changes - published to "order-status-changed" topic</li>
@@ -65,10 +65,10 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final UserServiceClient userServiceClient;
     private final ProductServiceClient productServiceClient;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final SqsTemplate sqsTemplate;
 
-    private static final String ORDER_CREATED_TOPIC = "order-created";
-    private static final String ORDER_STATUS_CHANGED_TOPIC = "order-status-changed";
+    private static final String ORDER_CREATED_QUEUE = "order-created";
+    private static final String ORDER_STATUS_CHANGED_QUEUE = "order-status-changed";
 
     /**
      * Creates a new order in the database.
@@ -79,13 +79,13 @@ public class OrderService {
      *   <li>Validates products exist and fetches details using ProductServiceClient (OpenFeign)</li>
      *   <li>Creates order items with product snapshots</li>
      *   <li>Saves the order to the database</li>
-     *   <li>Publishes OrderCreatedEvent to Kafka</li>
+     *   <li>Publishes OrderCreatedEvent to SQS</li>
      * </ol>
      * 
      * @param request OrderRequest containing user ID and order items
      * @return OrderResponse representing the created order
      * @throws RuntimeException if user or product validation fails
-     * @apiNote This method uses a write transaction and publishes Kafka events
+     * @apiNote This method uses a write transaction and publishes SQS events
      */
     @Transactional
     public OrderResponse createOrder(OrderRequest request) {
@@ -140,7 +140,7 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
         log.info("Order created successfully with ID: {}", savedOrder.getId());
 
-        // Publish Kafka event (asynchronous)
+        // Publish SQS event (asynchronous)
         publishOrderCreatedEvent(savedOrder);
 
         return mapToResponse(savedOrder);
@@ -196,14 +196,14 @@ public class OrderService {
      *   <li>Retrieves the order by ID</li>
      *   <li>Updates the status</li>
      *   <li>Saves the order</li>
-     *   <li>Publishes OrderStatusChangedEvent to Kafka</li>
+     *   <li>Publishes OrderStatusChangedEvent to SQS</li>
      * </ol>
      * 
      * @param id The unique identifier of the order
      * @param newStatus The new status to set
      * @return OrderResponse object representing the updated order
      * @throws RuntimeException if order is not found
-     * @apiNote This method uses a write transaction and publishes Kafka events
+     * @apiNote This method uses a write transaction and publishes SQS events
      */
     @Transactional
     public OrderResponse updateOrderStatus(Long id, OrderStatus newStatus) {
@@ -218,18 +218,18 @@ public class OrderService {
 
         log.info("Order {} status updated from {} to {}", id, previousStatus, newStatus);
 
-        // Publish Kafka event (asynchronous)
+        // Publish SQS event (asynchronous)
         publishOrderStatusChangedEvent(updatedOrder, previousStatus);
 
         return mapToResponse(updatedOrder);
     }
 
     /**
-     * Publishes an OrderCreatedEvent to Kafka.
+     * Publishes an OrderCreatedEvent to SQS.
      * 
      * <p>This method creates an OrderCreatedEvent from the order entity and
-     * publishes it to the "order-created" Kafka topic. Other services can
-     * subscribe to this topic to react to order creation.
+     * sends it to the "order-created" SQS queue. The product-service polls
+     * this queue to react to order creation.
      * 
      * @param order The order that was created
      */
@@ -249,7 +249,7 @@ public class OrderService {
                     order.getCreatedAt()
             );
 
-            kafkaTemplate.send(ORDER_CREATED_TOPIC, event);
+            sqsTemplate.send(ORDER_CREATED_QUEUE, event);
             log.info("Published OrderCreatedEvent for order ID: {}", order.getId());
         } catch (Exception e) {
             log.error("Failed to publish OrderCreatedEvent for order ID: {}", order.getId(), e);
@@ -258,11 +258,11 @@ public class OrderService {
     }
 
     /**
-     * Publishes an OrderStatusChangedEvent to Kafka.
+     * Publishes an OrderStatusChangedEvent to SQS.
      * 
      * <p>This method creates an OrderStatusChangedEvent from the order entity and
-     * publishes it to the "order-status-changed" Kafka topic. Other services can
-     * subscribe to this topic to react to status changes.
+     * sends it to the "order-status-changed" SQS queue for any interested
+     * consumer to react to status changes.
      * 
      * @param order The order whose status changed
      * @param previousStatus The previous status before the change
@@ -277,7 +277,7 @@ public class OrderService {
                     LocalDateTime.now()
             );
 
-            kafkaTemplate.send(ORDER_STATUS_CHANGED_TOPIC, event);
+            sqsTemplate.send(ORDER_STATUS_CHANGED_QUEUE, event);
             log.info("Published OrderStatusChangedEvent for order ID: {} ({} -> {})",
                     order.getId(), previousStatus, order.getStatus());
         } catch (Exception e) {

@@ -23,7 +23,7 @@ import static org.mockito.Mockito.*;
 /**
  * Unit tests for OrderEventConsumer.
  * 
- * <p>This test class verifies that the Kafka event consumer correctly
+ * <p>This test class verifies that the SQS event consumer correctly
  * processes OrderCreatedEvent and updates product inventory.
  * 
  * @author Cloud Computing Course

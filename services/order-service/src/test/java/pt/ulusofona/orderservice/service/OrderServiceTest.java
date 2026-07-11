@@ -6,7 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.kafka.core.KafkaTemplate;
+import io.awspring.cloud.sqs.operations.SqsTemplate;
 import pt.ulusofona.orderservice.client.ProductResponse;
 import pt.ulusofona.orderservice.client.ProductServiceClient;
 import pt.ulusofona.orderservice.client.UserResponse;
@@ -34,7 +34,7 @@ import static org.mockito.Mockito.*;
  * 
  * <p>This test class verifies the business logic of the OrderService,
  * including order creation, retrieval, and status updates. It uses
- * Mockito to mock dependencies (repository, Feign clients, Kafka).
+ * Mockito to mock dependencies (repository, Feign clients, SQS).
  * 
  * @author Cloud Computing Course
  * @version 1.0.0
@@ -53,7 +53,7 @@ class OrderServiceTest {
     private ProductServiceClient productServiceClient;
 
     @Mock
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    private SqsTemplate sqsTemplate;
 
     @InjectMocks
     private OrderService orderService;
@@ -129,7 +129,7 @@ class OrderServiceTest {
         verify(userServiceClient, times(1)).getUserById(1L);
         verify(productServiceClient, times(1)).getProductById(1L);
         verify(orderRepository, times(1)).save(any(Order.class));
-        verify(kafkaTemplate, times(1)).send(eq("order-created"), any());
+        verify(sqsTemplate, times(1)).send(eq("order-created"), any());
     }
 
     @Test
@@ -267,7 +267,7 @@ class OrderServiceTest {
         assertEquals(OrderStatus.CONFIRMED, response.getStatus());
         verify(orderRepository, times(1)).findById(1L);
         verify(orderRepository, times(1)).save(any(Order.class));
-        verify(kafkaTemplate, times(1)).send(eq("order-status-changed"), any());
+        verify(sqsTemplate, times(1)).send(eq("order-status-changed"), any());
     }
 
     @Test

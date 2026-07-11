@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
 /**
- * Represents an order item in a Kafka event.
+ * Represents an order item in an SQS event.
  * 
  * <p>This class is used within OrderCreatedEvent and OrderStatusChangedEvent
  * to represent individual items in an order.

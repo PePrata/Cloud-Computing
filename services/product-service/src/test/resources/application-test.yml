@@ -11,6 +11,11 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
-  kafka:
-    consumer:
-      auto-startup: false
+  cloud:
+    aws:
+      sqs:
+        listener:
+          auto-startup: false
+
+aws:
+  region: us-east-1

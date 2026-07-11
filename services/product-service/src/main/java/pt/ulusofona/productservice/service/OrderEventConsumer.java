@@ -2,7 +2,7 @@ package pt.ulusofona.productservice.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.annotation.KafkaListener;
+import io.awspring.cloud.sqs.annotation.SqsListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pt.ulusofona.productservice.event.OrderCreatedEvent;
@@ -11,10 +11,10 @@ import pt.ulusofona.productservice.model.Product;
 import pt.ulusofona.productservice.repository.ProductRepository;
 
 /**
- * Kafka event consumer for order-related events.
+ * SQS event consumer for order-related events.
  * 
- * <p>This service consumes events from Kafka topics published by the Order Service.
- * It handles:
+ * <p>This service consumes messages from the SQS queue published by the Order
+ * Service. It handles:
  * <ul>
  *   <li>OrderCreatedEvent - Updates product inventory when orders are created</li>
  * </ul>
@@ -34,19 +34,24 @@ public class OrderEventConsumer {
     private final ProductRepository productRepository;
 
     /**
-     * Consumes OrderCreatedEvent from Kafka.
+     * Consumes OrderCreatedEvent from SQS.
      * 
      * <p>This method is automatically invoked when a message is received on the
-     * "order-created" topic. It updates the stock quantity for each product
+     * "order-created" queue. It updates the stock quantity for each product
      * in the order by subtracting the ordered quantity.
      * 
-     * <p>Note: In a production system, you might want to implement idempotency
-     * checks to handle duplicate events.
+     * <p>Note: SQS queues have a single logical consumer group built in (unlike
+     * Kafka, there is no separate {@code groupId} to configure) — each message
+     * is delivered to and removed by exactly one consumer.
      * 
-     * @param event The OrderCreatedEvent received from Kafka
+     * <p>Note: In a production system, you might want to implement idempotency
+     * checks to handle duplicate events (SQS's at-least-once delivery can
+     * redeliver a message more than once).
+     * 
+     * @param event The OrderCreatedEvent received from SQS
      * @apiNote This method uses a write transaction
      */
-    @KafkaListener(topics = "order-created", groupId = "product-service-group")
+    @SqsListener("order-created")
     @Transactional
     public void handleOrderCreated(OrderCreatedEvent event) {
         log.info("Received OrderCreatedEvent for order ID: {}", event.getOrderId());

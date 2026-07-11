@@ -9,9 +9,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Kafka event received when a new order is created.
+ * SQS event received when a new order is created.
  * 
- * <p>This event is consumed from the "order-created" Kafka topic. The Product Service
+ * <p>This event is consumed from the "order-created" SQS queue. The Product Service
  * uses this event to update inventory when orders are placed.
  * 
  * @author Cloud Computing Course

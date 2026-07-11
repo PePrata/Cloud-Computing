@@ -18,16 +18,9 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  
-  kafka:
-    bootstrap-servers: localhost:9092
-    consumer:
-      group-id: product-service-group
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
-        spring.json.type.mapping: orderCreated:pt.ulusofona.productservice.event.OrderCreatedEvent
+
+aws:
+  region: us-east-1
 
 server:
   port: 8082
@@ -65,5 +58,5 @@ logging:
   level:
     pt.ulusofona.productservice: DEBUG
     org.springframework.web: INFO
-    org.springframework.kafka: INFO
+    io.awspring.cloud.sqs: INFO
 

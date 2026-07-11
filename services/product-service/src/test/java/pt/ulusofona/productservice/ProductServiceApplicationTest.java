@@ -8,7 +8,7 @@ import org.springframework.test.context.ActiveProfiles;
  * Integration test for ProductServiceApplication.
  *
  * <p>Verifies that the Spring Boot application context loads successfully
- * with all required beans and configurations. Kafka auto-configuration
+ * with all required beans and configurations. SQS auto-configuration
  * is excluded in the test profile to allow context load without a broker.
  */
 @SpringBootTest
