@@ -1,0 +1,114 @@
+# Bootstrap — a única parte da infraestrutura que não é código
+
+Tudo neste projeto é gerido por Terraform, **exceto** a identidade que o próprio Terraform usa para correr: a role `gha-deployer`. É um problema clássico do ovo-e-galinha — uma role não se pode auto-criar antes de existir — por isso este passo é manual, feito uma única vez, e documentado aqui em vez de num ficheiro `.tf`.
+
+## O que é a `gha-deployer`
+
+Uma IAM Role na conta AWS `202373502174` que o GitHub Actions assume via **OIDC** (não usa access keys fixas — o workflow troca um token assinado pelo GitHub por credenciais temporárias). É referenciada em `ci.yml`, `deploy.yml` e `aws-test.yml`:
+
+```yaml
+- uses: aws-actions/configure-aws-credentials@v4
+  with:
+    role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+    aws-region: us-east-1
+```
+
+## Como foi criada (passos de bootstrap, uma vez só)
+
+### 1. Registar o GitHub como fornecedor de identidade OIDC na AWS
+
+```bash
+aws iam create-open-id-connect-provider \
+  --url https://token.actions.githubusercontent.com \
+  --client-id-list sts.amazonaws.com \
+  --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1
+```
+
+### 2. Criar a role, confiando só neste repositório
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": { "Federated": "arn:aws:iam::202373502174:oidc-provider/token.actions.githubusercontent.com" },
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" },
+      "StringLike":  { "token.actions.githubusercontent.com:sub": "repo:<org>/<repo>:*" }
+    }
+  }]
+}
+```
+
+```bash
+aws iam create-role --role-name gha-deployer --assume-role-policy-document file://trust-policy.json
+```
+
+> A condição `token.actions.githubusercontent.com:sub` é o que impede **qualquer outro repositório** de assumir esta role — sem ela, qualquer conta GitHub com um workflow OIDC podia pedir as mesmas credenciais.
+
+## Permissões — o quê e porquê
+
+> **Nota:** este projeto usava originalmente MSK (Kafka gerido) para mensagens entre `order-service` e `product-service`. A MSK foi substituída por SQS porque contas AWS Free Tier costumam bloquear a criação de clusters MSK (`SubscriptionRequiredException`) — SQS é serverless, não tem esse problema, e cobre o mesmo caso de uso de produtor único/consumidor único.
+
+| Serviço | Porquê é preciso | Usado por |
+|---|---|---|
+| S3 + DynamoDB, leitura (`GetObject`, `ListBucket`, `dynamodb:*Item`) | Backend remoto do state e locking | `terraform init/plan` |
+| S3, **escrita** (`s3:PutObject`) | Gravar o `.tfstate` depois de criar/alterar recursos — só é exercitado num `apply` real, por isso passou despercebido até agora | `terraform apply` |
+| EC2 (`AmazonEC2FullAccess`) | Criar VPC, subnets, security groups, a instância `app_host`, ler AMIs (`DescribeImages`) e AZs (`DescribeAvailabilityZones`) | `modules/vpc`, `modules/security`, `modules/compute` |
+| RDS (`AmazonRDSFullAccess`) | Criar a instância PostgreSQL e o subnet group | `modules/db` |
+| SQS (`sqs:CreateQueue`, `sqs:DeleteQueue`, `sqs:TagQueue`, `sqs:SetQueueAttributes`, `sqs:GetQueueAttributes`) | Criar as filas `order-created` e `order-status-changed` | `modules/messaging` |
+| IAM, com escopo | Criar a role/instance profile que a EC2 usa para autenticar no ECR (`iam:CreateRole`, `PassRole`, etc., restrito a `shop-*-app-host-role`) | `modules/compute` |
+| ECR (`push`/`pull`) | Publicar as imagens dos 4 serviços | `deploy.yml`, indiretamente a EC2 |
+
+## Comandos para recriar as permissões do zero
+
+```bash
+aws iam attach-role-policy --role-name gha-deployer --policy-arn arn:aws:iam::aws:policy/AmazonEC2FullAccess
+aws iam attach-role-policy --role-name gha-deployer --policy-arn arn:aws:iam::aws:policy/AmazonRDSFullAccess
+
+# SQS (substituiu a MSK — não precisa de FullAccess, são só 2 filas)
+aws iam put-role-policy \
+  --role-name gha-deployer \
+  --policy-name sqs-messaging \
+  --policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Effect": "Allow",
+      "Action": [
+        "sqs:CreateQueue", "sqs:DeleteQueue", "sqs:TagQueue",
+        "sqs:SetQueueAttributes", "sqs:GetQueueAttributes"
+      ],
+      "Resource": "arn:aws:sqs:us-east-1:202373502174:*"
+    }]
+  }'
+
+# escrita no state (faltava — só aparece num apply real, não em init/plan)
+aws iam put-role-policy \
+  --role-name gha-deployer \
+  --policy-name terraform-state-write \
+  --policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+      "Resource": [
+        "arn:aws:s3:::service-tf-state-us-east-1-202373502174-us-east-1-an",
+        "arn:aws:s3:::service-tf-state-us-east-1-202373502174-us-east-1-an/*"
+      ]
+    }]
+  }'
+
+aws iam put-role-policy \
+  --role-name gha-deployer \
+  --policy-name app-host-iam-scoped \
+  --policy-document file://app-host-iam-policy.json   # ver secção anterior da conversa/PR para o JSON exato
+```
+
+## Porque não `AdministratorAccess`
+
+Esta role corre **sem supervisão humana**, disparada por qualquer push para `main` — é uma superfície de ataque diferente de uma credencial de developer local. Vale a pena o esforço extra de a manter com o mínimo de permissões que o projeto realmente usa, em vez de dar acesso total à conta.
+
+## Se precisares de expandir mais tarde (DR)
+
+O trabalho de disaster recovery (`infrastructure/`) vai precisar de permissões adicionais na mesma role: `route53:*HealthCheck*`, `route53:ChangeResourceRecordSets`, `secretsmanager:*`, `lambda:*`, `sns:*`, `rds:PromoteReadReplica`, `ec2:StartInstances`/`StopInstances`. Atualiza esta tabela quando os adicionares.

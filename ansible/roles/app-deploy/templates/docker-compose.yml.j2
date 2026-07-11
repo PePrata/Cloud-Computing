@@ -24,7 +24,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://{{ db_host }}/{{ db_name }}
       - SPRING_DATASOURCE_USERNAME={{ db_username }}
       - SPRING_DATASOURCE_PASSWORD={{ db_password }}
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS={{ kafka_brokers }}
+      - AWS_REGION={{ aws_region }}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
       interval: 10s
@@ -40,7 +40,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://{{ db_host }}/{{ db_name }}
       - SPRING_DATASOURCE_USERNAME={{ db_username }}
       - SPRING_DATASOURCE_PASSWORD={{ db_password }}
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS={{ kafka_brokers }}
+      - AWS_REGION={{ aws_region }}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
       interval: 10s
