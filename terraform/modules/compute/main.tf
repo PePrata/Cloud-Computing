@@ -56,6 +56,31 @@ resource "aws_iam_role_policy_attachment" "app_host_ecr_readonly" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
+# ── SQS ACCESS ────────────────────────────────────────────────
+# order-service publishes to, and product-service consumes from, the
+# queues created by modules/messaging. Both run as containers on this
+# same host, so one role covers both directions.
+resource "aws_iam_role_policy" "app_host_sqs" {
+  count = length(var.sqs_queue_arns) > 0 ? 1 : 0
+  name  = "${var.project_name}-${var.environment}-app-host-sqs"
+  role  = aws_iam_role.app_host.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "sqs:SendMessage",
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl"
+      ]
+      Resource = var.sqs_queue_arns
+    }]
+  })
+}
+
 resource "aws_iam_instance_profile" "app_host" {
   name = "${var.project_name}-${var.environment}-app-host-profile"
   role = aws_iam_role.app_host.name

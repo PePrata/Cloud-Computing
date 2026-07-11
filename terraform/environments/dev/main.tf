@@ -46,12 +46,10 @@ module "db" {
 }
 
 module "messaging" {
-  source                = "../../modules/messaging"
-  private_subnets       = module.vpc.private_subnets
-  msk_security_group_id = module.security.msk_security_group_id
-  project_name          = var.project_name
-  environment           = var.environment
-  tags                  = var.global_tags
+  source       = "../../modules/messaging"
+  project_name = var.project_name
+  environment  = var.environment
+  tags         = var.global_tags
 }
 
 module "compute" {
@@ -68,12 +66,15 @@ module "compute" {
     module.security.product_service_security_group_id,
     module.security.order_service_security_group_id,
   ]
+  sqs_queue_arns = [
+    module.messaging.order_created_queue_arn,
+    module.messaging.order_status_changed_queue_arn,
+  ]
 }
 
 resource "local_file" "ansible_vars" {
   content = templatefile("${path.module}/templates/all.yml.tpl", {
     rds_endpoint = module.db.rds_endpoint
-    msk_brokers  = module.messaging.bootstrap_brokers
     db_username  = var.db_username
     db_password  = var.db_password
   })

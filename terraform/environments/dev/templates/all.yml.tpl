@@ -7,5 +7,3 @@ db_host: "${rds_endpoint}"
 db_name: "shop_master"
 db_username: "${db_username}"
 db_password: "${db_password}"
-
-kafka_brokers: "${msk_brokers}"

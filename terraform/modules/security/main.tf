@@ -99,13 +99,13 @@ resource "aws_security_group_rule" "product_egress_all" {
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.product_service.id
-  description       = "Unrestricted outbound for RDS and MSK access."
+  description       = "Unrestricted outbound for RDS access."
 }
 
 # ── 4. ORDER SERVICE ─────────────────────────────────────────
 resource "aws_security_group" "order_service" {
   name        = "${var.project_name}-${var.environment}-order-service-sg"
-  description = "Accepts HTTP from api-gateway only. Initiates outbound Feign and Kafka calls."
+  description = "Accepts HTTP from api-gateway only. Initiates outbound Feign calls."
   vpc_id      = var.vpc_id
   tags        = { Name = "${var.project_name}-${var.environment}-order-service-sg" }
 }
@@ -127,7 +127,7 @@ resource "aws_security_group_rule" "order_egress_all" {
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.order_service.id
-  description       = "Unrestricted outbound for Feign calls, RDS and MSK access."
+  description       = "Unrestricted outbound for Feign calls and RDS access."
 }
 
 # ── 5. RDS POSTGRESQL ────────────────────────────────────────
@@ -176,42 +176,4 @@ resource "aws_security_group_rule" "rds_egress_all" {
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.rds.id
   description       = "Unrestricted outbound for RDS maintenance traffic."
-}
-
-# ── 6. MSK KAFKA ─────────────────────────────────────────────
-resource "aws_security_group" "msk" {
-  name        = "${var.project_name}-${var.environment}-msk-sg"
-  description = "Accepts Kafka connections from order-service (producer) and product-service (consumer)."
-  vpc_id      = var.vpc_id
-  tags        = { Name = "${var.project_name}-${var.environment}-msk-sg" }
-}
-
-resource "aws_security_group_rule" "msk_from_order_producer" {
-  type                     = "ingress"
-  from_port                = 9092
-  to_port                  = 9094
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.order_service.id
-  security_group_id        = aws_security_group.msk.id
-  description              = "order-service Kafka producer: publishes to order-created topic."
-}
-
-resource "aws_security_group_rule" "msk_from_product_consumer" {
-  type                     = "ingress"
-  from_port                = 9092
-  to_port                  = 9094
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.product_service.id
-  security_group_id        = aws_security_group.msk.id
-  description              = "product-service Kafka consumer: reads order-created topic to update stock."
-}
-
-resource "aws_security_group_rule" "msk_egress_all" {
-  type              = "egress"
-  from_port         = 0
-  to_port           = 0
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.msk.id
-  description       = "Unrestricted outbound for MSK broker replication traffic."
 }

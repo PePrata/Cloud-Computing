@@ -1,24 +1,22 @@
-resource "aws_msk_cluster" "kafka" {
-  cluster_name           = "${var.project_name}-${var.environment}-kafka-cluster"
-  kafka_version          = "3.6.0"
-  number_of_broker_nodes = 2
+# Substitui o cluster MSK original por duas filas SQS "standard".
+# Motivo: MSK exige subscrição/serviço não disponível em contas AWS Free
+# Tier; SQS é serverless, sem cluster para provisionar, e cobre o mesmo
+# caso de uso (order-service publica, product-service consome) porque
+# há sempre exatamente um consumidor por evento — não é preciso o
+# fan-out de vários consumer groups que só o Kafka oferece.
 
-  broker_node_group_info {
-    instance_type   = "kafka.t3.small"
-    client_subnets  = var.private_subnets
-    security_groups = [var.msk_security_group_id]
+resource "aws_sqs_queue" "order_created" {
+  name                       = "order-created"
+  visibility_timeout_seconds = 30
+  message_retention_seconds  = 345600 # 4 dias, igual ao default do Kafka log.retention
 
-    storage_info {
-      ebs_storage_info { volume_size = 10 }
-    }
-  }
+  tags = merge(var.tags, { Name = "${var.project_name}-${var.environment}-order-created" })
+}
 
-  encryption_info {
-    encryption_in_transit {
-      client_broker = "PLAINTEXT" # toggle to TLS before final release
-      in_cluster    = true
-    }
-  }
+resource "aws_sqs_queue" "order_status_changed" {
+  name                       = "order-status-changed"
+  visibility_timeout_seconds = 30
+  message_retention_seconds  = 345600
 
-  tags = var.tags
+  tags = merge(var.tags, { Name = "${var.project_name}-${var.environment}-order-status-changed" })
 }

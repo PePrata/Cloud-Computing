@@ -8,9 +8,14 @@ output "rds_endpoint" {
   description = "RDS PostgreSQL endpoint — injected by Terraform into all.yml as db_host for the Spring Boot containers."
 }
 
-output "msk_bootstrap_brokers" {
-  value       = module.messaging.bootstrap_brokers
-  description = "MSK Kafka bootstrap brokers (port 9092) — injected into all.yml as kafka_brokers for SPRING_KAFKA_BOOTSTRAP_SERVERS."
+output "sqs_order_created_queue_url" {
+  value       = module.messaging.order_created_queue_url
+  description = "SQS queue URL for order-created events, published by order-service and consumed by product-service."
+}
+
+output "sqs_order_status_changed_queue_url" {
+  value       = module.messaging.order_status_changed_queue_url
+  description = "SQS queue URL for order-status-changed events, published by order-service (no current consumer)."
 }
 
 output "ec2_public_ip" {

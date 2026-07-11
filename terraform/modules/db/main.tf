@@ -7,7 +7,7 @@ resource "aws_db_subnet_group" "rds" {
 resource "aws_db_instance" "postgres" {
   identifier             = "${var.project_name}-${var.environment}-postgres"
   engine                 = "postgres"
-  engine_version         = "16.1"
+  engine_version         = "16.12"
   instance_class         = "db.t4g.micro"
   allocated_storage      = 20
   max_allocated_storage  = 50

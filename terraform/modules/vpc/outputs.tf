@@ -9,7 +9,7 @@ output "public_subnets" {
 }
 
 output "private_subnets" {
-  description = "Private subnet IDs — passed to the messaging module for MSK broker placement."
+  description = "Private subnet IDs — reserved for future use by internal services that need to stay off the public internet."
   value       = aws_subnet.private[*].id
 }
 

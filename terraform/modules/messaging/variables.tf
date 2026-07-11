@@ -1,16 +1,6 @@
-variable "private_subnets" {
-  type        = list(string)
-  description = "List of private network subnet identifiers allocated to run Apache Kafka cluster brokers."
-}
-
-variable "msk_security_group_id" {
-  type        = string
-  description = "Security group identifier managing client stream broker inbound traffic limits."
-}
-
 variable "project_name" {
   type        = string
-  description = "A structural namespace prefix applied to cluster naming arrays."
+  description = "A structural namespace prefix applied to resource naming."
 }
 
 variable "environment" {
@@ -20,5 +10,5 @@ variable "environment" {
 
 variable "tags" {
   type        = map(string)
-  description = "Operational tags applied to the AWS MSK resources."
+  description = "Operational tags applied to the SQS queues."
 }

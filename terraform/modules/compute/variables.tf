@@ -44,3 +44,9 @@ variable "tags" {
   type        = map(string)
   description = "A mapping configuration block assigning resource ownership metadata tags."
 }
+
+variable "sqs_queue_arns" {
+  type        = list(string)
+  description = "ARNs of the SQS queues (order-created, order-status-changed) the app host needs to send/receive/delete messages on."
+  default     = []
+}
