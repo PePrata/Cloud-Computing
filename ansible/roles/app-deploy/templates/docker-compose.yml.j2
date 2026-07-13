@@ -1,5 +1,10 @@
 version: '3.8'
 
+# Limites de memória por serviço: o app host corre em t3.micro (1 GB RAM,
+# elegível para Free Tier) e tem de caber 4 JVMs Spring Boot em simultâneo.
+# JAVA_TOOL_OPTIONS é lido automaticamente por qualquer JVM ao arrancar,
+# sem precisar de alterar o Dockerfile de cada serviço.
+
 services:
   user-service:
     image: "{{ ecr_registry_url }}/shop-user-service:{{ image_tag }}"
@@ -9,6 +14,11 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://{{ db_host }}/{{ db_name }}
       - SPRING_DATASOURCE_USERNAME={{ db_username }}
       - SPRING_DATASOURCE_PASSWORD={{ db_password }}
+      - JAVA_TOOL_OPTIONS=-Xmx180m -Xss256k -XX:MaxMetaspaceSize=96m
+    deploy:
+      resources:
+        limits:
+          memory: 220m
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
       interval: 10s
@@ -25,6 +35,11 @@ services:
       - SPRING_DATASOURCE_USERNAME={{ db_username }}
       - SPRING_DATASOURCE_PASSWORD={{ db_password }}
       - AWS_REGION={{ aws_region }}
+      - JAVA_TOOL_OPTIONS=-Xmx180m -Xss256k -XX:MaxMetaspaceSize=96m
+    deploy:
+      resources:
+        limits:
+          memory: 220m
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
       interval: 10s
@@ -41,6 +56,11 @@ services:
       - SPRING_DATASOURCE_USERNAME={{ db_username }}
       - SPRING_DATASOURCE_PASSWORD={{ db_password }}
       - AWS_REGION={{ aws_region }}
+      - JAVA_TOOL_OPTIONS=-Xmx180m -Xss256k -XX:MaxMetaspaceSize=96m
+    deploy:
+      resources:
+        limits:
+          memory: 220m
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
       interval: 10s
@@ -56,6 +76,11 @@ services:
       - USER_SERVICE_URL=http://user-service:8081
       - PRODUCT_SERVICE_URL=http://product-service:8082
       - ORDER_SERVICE_URL=http://order-service:8083
+      - JAVA_TOOL_OPTIONS=-Xmx150m -Xss256k -XX:MaxMetaspaceSize=80m
+    deploy:
+      resources:
+        limits:
+          memory: 190m
     depends_on:
       user-service:
         condition: service_healthy

@@ -51,6 +51,8 @@ aws iam create-role --role-name gha-deployer --assume-role-policy-document file:
 
 > **Nota:** este projeto usava originalmente MSK (Kafka gerido) para mensagens entre `order-service` e `product-service`. A MSK foi substituída por SQS porque contas AWS Free Tier costumam bloquear a criação de clusters MSK (`SubscriptionRequiredException`) — SQS é serverless, não tem esse problema, e cobre o mesmo caso de uso de produtor único/consumidor único.
 
+> **Nota (compute):** pela mesma razão, o `app_host` corre em `t3.micro` (elegível Free Tier) em vez de `t3.medium`. Isso dá só 1 GB de RAM para os 4 serviços Spring Boot — `modules/compute` limita cada JVM a `-Xmx180m`/`-Xmx150m` via `JAVA_TOOL_OPTIONS` no `docker-compose.yml.j2`, e a instância arranca com 2 GB de swap (`user_data` em `modules/compute/main.tf`) como rede de segurança contra OOM kills. Se a aplicação ficar lenta ou os containers reiniciarem sozinhos, é o primeiro sítio a olhar — `docker stats` na instância mostra se algum serviço está a bater no limite.
+
 | Serviço | Porquê é preciso | Usado por |
 |---|---|---|
 | S3 + DynamoDB, leitura (`GetObject`, `ListBucket`, `dynamodb:*Item`) | Backend remoto do state e locking | `terraform init/plan` |
