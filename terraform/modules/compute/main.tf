@@ -14,8 +14,6 @@ data "aws_ami" "amazon_linux_2023" {
 }
 
 # ── SSH ACCESS ────────────────────────────────────────────────
-# None of the per-service security groups expose port 22; the app host
-# needs its own inbound rule so the Ansible deploy step can reach it.
 resource "aws_security_group" "app_host_ssh" {
   name        = "${var.project_name}-${var.environment}-app-host-ssh-sg"
   description = "Allows SSH from the CD pipeline so Ansible can configure and deploy the app host."
@@ -34,8 +32,6 @@ resource "aws_security_group_rule" "app_host_ssh_ingress" {
 }
 
 # ── ECR PULL PERMISSIONS ─────────────────────────────────────
-# The app-deploy Ansible role runs `aws ecr get-login-password` on the
-# instance itself, so it needs an instance profile with ECR read access.
 resource "aws_iam_role" "app_host" {
   name = "${var.project_name}-${var.environment}-app-host-role"
 
@@ -57,9 +53,6 @@ resource "aws_iam_role_policy_attachment" "app_host_ecr_readonly" {
 }
 
 # ── SQS ACCESS ────────────────────────────────────────────────
-# order-service publishes to, and product-service consumes from, the
-# queues created by modules/messaging. Both run as containers on this
-# same host, so one role covers both directions.
 resource "aws_iam_role_policy" "app_host_sqs" {
   count = length(var.sqs_queue_arns) > 0 ? 1 : 0
   name  = "${var.project_name}-${var.environment}-app-host-sqs"
@@ -87,8 +80,6 @@ resource "aws_iam_instance_profile" "app_host" {
 }
 
 # ── EC2 APP HOST ──────────────────────────────────────────────
-# Single Amazon Linux 2023 host running api-gateway, user-service,
-# product-service and order-service together via docker compose.
 resource "aws_instance" "app_host" {
   ami                         = data.aws_ami.amazon_linux_2023.id
   instance_type               = var.instance_type
@@ -98,8 +89,6 @@ resource "aws_instance" "app_host" {
   iam_instance_profile        = aws_iam_instance_profile.app_host.name
   associate_public_ip_address = true
 
-  # t3.micro só tem 1 GB de RAM para 4 JVMs — 2 GB de swap dá margem extra
-  # contra OOM kills sem exigir uma instância maior (fora do Free Tier).
   user_data = <<-EOF
     #!/bin/bash
     fallocate -l 2G /swapfile
