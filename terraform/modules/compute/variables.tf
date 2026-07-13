@@ -25,8 +25,8 @@ variable "environment" {
 
 variable "instance_type" {
   type        = string
-  description = "EC2 instance size for the Docker Compose app host."
-  default     = "t3.medium"
+  description = "EC2 instance size for the Docker Compose app host. Default is t3.micro (Free Tier eligible in us-east-1) — see the RAM warning in bootstrap.md before running 4 Spring Boot services on it."
+  default     = "t3.micro"
 }
 
 variable "key_name" {

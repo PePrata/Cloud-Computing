@@ -98,5 +98,16 @@ resource "aws_instance" "app_host" {
   iam_instance_profile        = aws_iam_instance_profile.app_host.name
   associate_public_ip_address = true
 
+  # t3.micro só tem 1 GB de RAM para 4 JVMs — 2 GB de swap dá margem extra
+  # contra OOM kills sem exigir uma instância maior (fora do Free Tier).
+  user_data = <<-EOF
+    #!/bin/bash
+    fallocate -l 2G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  EOF
+
   tags = merge(var.tags, { Name = "${var.project_name}-${var.environment}-app-host" })
 }
