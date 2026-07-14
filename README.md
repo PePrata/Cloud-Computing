@@ -71,14 +71,3 @@ mvn spring-boot:run
 
 Or the whole stack via the same `docker-compose.yml` Ansible renders in
 production — see `docs/setup.md` for local prerequisites.
-
-## Documentation index
-
-| File | What it covers |
-|---|---|
-| `docs/architecture.md` | Components, data flow, diagrams |
-| `docs/setup.md` | Local prerequisites, AWS prerequisites |
-| `docs/deployment.md` | Step-by-step: `terraform apply` → image build → deploy |
-| `docs/security.md` | IAM roles, secrets handling, least-privilege rationale |
-| `docs/dr.md` | Disaster-recovery runbook: trigger, observe, roll back a failover; target vs. measured RTO/RPO |
-| `docs/limitations.md` | What's incomplete + roadmap |
