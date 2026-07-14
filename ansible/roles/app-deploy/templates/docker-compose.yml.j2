@@ -19,7 +19,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 45s
+      start_period: 900s
     restart: always
 
   product-service:
@@ -41,7 +41,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 45s
+      start_period: 900s
     restart: always
 
   order-service:
@@ -63,7 +63,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 45s
+      start_period: 900s
     restart: always
 
   api-gateway:
@@ -91,5 +91,5 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 45s
+      start_period: 900s
     restart: always
