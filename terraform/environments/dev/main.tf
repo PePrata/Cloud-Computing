@@ -52,6 +52,14 @@ module "messaging" {
   tags         = var.global_tags
 }
 
+module "ecr" {
+  source        = "../../modules/ecr"
+  project_name  = var.project_name
+  environment   = var.environment
+  tags          = var.global_tags
+  service_names = ["api-gateway", "user-service", "product-service", "order-service"]
+}
+
 module "compute" {
   source           = "../../modules/compute"
   vpc_id           = module.vpc.vpc_id
