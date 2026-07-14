@@ -18,3 +18,5 @@
 
 - name: Trigger Rolling Standby Stack Instantiation And Await Active Verification Signals
   shell: "docker compose -f /opt/shop/docker-compose.yml up -d --wait --remove-orphans"
+  async: 900   # Set maximum wait time to 900 seconds (15 minutes)
+  poll: 15
