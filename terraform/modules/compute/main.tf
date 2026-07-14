@@ -81,6 +81,31 @@ resource "aws_iam_role_policy" "app_host_sqs" {
   })
 }
 
+# ── SSM PARAMETER STORE ACCESS ───────────────────────────────
+# The Ansible app-deploy role fetches DB credentials from SSM Parameter
+# Store directly on the instance at deploy time (via its IAM role),
+# instead of receiving them as plaintext template variables rendered by
+# the CI runner. Scoped to this project/environment's parameter path
+# in this instance's own region only.
+resource "aws_iam_role_policy" "app_host_ssm_read" {
+  count = var.ssm_parameter_arns_read != null ? 1 : 0
+  name  = "${var.project_name}-${var.environment}-app-host-ssm-read"
+  role  = aws_iam_role.app_host.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath"
+      ]
+      Resource = var.ssm_parameter_arns_read
+    }]
+  })
+}
+
 resource "aws_iam_instance_profile" "app_host" {
   name = "${var.project_name}-${var.environment}-app-host-profile"
   role = aws_iam_role.app_host.name
@@ -114,14 +139,36 @@ resource "aws_instance" "app_host" {
 
   # t3.micro só tem 1 GB de RAM para 4 JVMs — 2 GB de swap dá margem extra
   # contra OOM kills sem exigir uma instância maior (fora do Free Tier).
-  user_data = <<-EOF
+  user_data = <<-EOF2
     #!/bin/bash
     fallocate -l 2G /swapfile
     chmod 600 /swapfile
     mkswap /swapfile
     swapon /swapfile
     echo '/swapfile none swap sw 0 0' >> /etc/fstab
-  EOF
+  EOF2
 
   tags = merge(var.tags, { Name = "${var.project_name}-${var.environment}-app-host" })
+}
+
+# ── STABLE ADDRESS FOR ROUTE 53 FAILOVER ─────────────────────
+# The primary and standby EIPs are the two static targets that Route 53
+# health checks and failover DNS records point at, so they must survive
+# instance stop/start (pilot-light) and terraform apply cycles.
+resource "aws_eip" "app_host" {
+  domain   = "vpc"
+  instance = aws_instance.app_host.id
+  tags     = merge(var.tags, { Name = "${var.project_name}-${var.environment}-app-host-eip" })
+}
+
+# ── PILOT-LIGHT STATE CONTROL ────────────────────────────────
+# aws_instance has no native "state" argument for stop/start — the
+# aws_ec2_instance_state resource (provider >= 5.0) manages power state
+# without forcing instance replacement. Used to keep the standby host
+# stopped (pilot-light, near-zero compute cost) until a failover drill
+# or real failover starts it.
+resource "aws_ec2_instance_state" "app_host" {
+  count       = var.manage_instance_state ? 1 : 0
+  instance_id = aws_instance.app_host.id
+  state       = var.instance_state
 }

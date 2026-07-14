@@ -24,3 +24,9 @@ variable "tags" {
   description = "Common tags applied to all resources."
   default     = {}
 }
+
+variable "replicate_to_region" {
+  type        = string
+  description = "If set (e.g. \"eu-west-1\"), configures ECR registry-level replication from this (primary) region to the given DR region, so images pushed once are pullable locally by the standby app host. Leave null in the DR environment, which does not create its own ECR repos."
+  default     = null
+}

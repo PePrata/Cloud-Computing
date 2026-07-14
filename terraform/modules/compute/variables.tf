@@ -50,3 +50,21 @@ variable "sqs_queue_arns" {
   description = "ARNs of the SQS queues (order-created, order-status-changed) the app host needs to send/receive/delete messages on."
   default     = []
 }
+
+variable "ssm_parameter_arns_read" {
+  type        = list(string)
+  description = "ARNs of SSM parameters (SecureString DB credentials, etc.) the app host is allowed to GetParameter/GetParametersByPath on. Null skips creating the policy."
+  default     = null
+}
+
+variable "manage_instance_state" {
+  type        = bool
+  description = "If true, Terraform manages the EC2 power state via aws_ec2_instance_state (pilot-light). Leave false for the primary, which should always run."
+  default     = false
+}
+
+variable "instance_state" {
+  type        = string
+  description = "Desired power state when manage_instance_state = true. 'stopped' = pilot-light (cost-saving); 'running' = warm standby or promoted-primary."
+  default     = "stopped"
+}

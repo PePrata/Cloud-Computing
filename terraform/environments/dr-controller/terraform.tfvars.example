@@ -1,0 +1,3 @@
+project_name   = "shop"
+hosted_zone_id = "Z0123456789ABCDEFGHIJ"   # replace with your Route 53 hosted zone ID
+dns_name       = "shop.example.com"        # replace with your domain

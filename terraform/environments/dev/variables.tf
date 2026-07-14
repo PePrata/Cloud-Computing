@@ -1,6 +1,6 @@
 variable "aws_region" {
   type        = string
-  description = "Target deployment region"
+  description = "Target deployment region (primary)"
   default     = "us-east-1"
 }
 
@@ -29,6 +29,24 @@ variable "db_password" {
 variable "key_name" {
   type        = string
   description = "Name of an EC2 key pair that already exists in AWS. Its private half must match the ANSIBLE_SSH_KEY GitHub secret."
+}
+
+variable "db_multi_az" {
+  type        = bool
+  description = "Enable RDS Multi-AZ (synchronous standby in a second AZ of us-east-1) for the primary instance. Complements, and is independent from, the cross-region read replica in the DR environment."
+  default     = true
+}
+
+variable "db_backup_retention_period" {
+  type        = number
+  description = "Automated backup retention in days. Must be > 0 (AWS requirement) for the DR environment to create a cross-region read replica from this instance. Directly bounds the achievable RPO — see docs/dr.md."
+  default     = 7
+}
+
+variable "dr_region" {
+  type        = string
+  description = "AWS region of the standby/DR environment. Used here only to configure ECR cross-region replication so images built once are available to the standby app host."
+  default     = "eu-west-1"
 }
 
 variable "global_tags" {

@@ -1,9 +1,11 @@
 ---
-aws_region: "us-east-1"
-ecr_registry_url: "202373502174.dkr.ecr.us-east-1.amazonaws.com"
+aws_region: "${aws_region}"
 image_tag: "latest"
 
-db_host: "${rds_endpoint}"
-db_name: "shop_master"
-db_username: "${db_username}"
-db_password: "${db_password}"
+db_host: "${db_host}"
+db_name: "${db_name}"
+ssm_parameter_prefix: "${ssm_parameter_prefix}"
+# Primary is always the active/writable side — there is no promotion
+# step for it, so this is a fixed value rather than an SSM lookup.
+ssm_status_parameter: ""
+db_role: "primary"
