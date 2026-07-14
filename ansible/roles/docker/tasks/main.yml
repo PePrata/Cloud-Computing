@@ -1,11 +1,21 @@
 ---
 - name: Install Container Platform Engine Via Native DNF (Amazon Linux 2023 Compliance)
   dnf:
-    name:
-      - docker
-      - docker-compose-plugin
+    name: docker
     state: present
     update_cache: yes
+
+- name: Ensure Docker CLI Plugins Directory Exists
+  file:
+    path: /usr/local/lib/docker/cli-plugins
+    state: directory
+    mode: '0755'
+
+- name: Install Docker Compose CLI Plugin (Not Packaged For Amazon Linux 2023)
+  get_url:
+    url: "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-{{ ansible_architecture }}"
+    dest: /usr/local/lib/docker/cli-plugins/docker-compose
+    mode: '0755'
 
 - name: Launch Container Lifecycle Daemon Engine
   systemd:
