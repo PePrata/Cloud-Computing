@@ -69,7 +69,7 @@ springdoc:
 # Service URLs (for Feign clients)
 services:
   user:
-    url: http://localhost:8081
+    url: http://user-service:8081
   product:
-    url: http://localhost:8082
+    url: http://product-service:8082
 
