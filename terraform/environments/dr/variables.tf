@@ -23,8 +23,8 @@ variable "key_name" {
 
 variable "db_backup_retention_period" {
   type        = number
-  description = "Automated backup retention in days for the replica."
-  default     = 7
+  description = "Automated backup retention in days for the replica. Kept at 1 (not 7) because Free Tier / sandbox AWS accounts reject higher retention periods with FreeTierRestrictionError on ModifyDBInstance/CreateDBInstance."
+  default     = 1
 }
 
 variable "standby_instance_state" {

@@ -62,6 +62,8 @@ aws iam create-role --role-name gha-deployer --assume-role-policy-document file:
 | SQS (`sqs:CreateQueue`, `sqs:DeleteQueue`, `sqs:TagQueue`, `sqs:SetQueueAttributes`, `sqs:GetQueueAttributes`) | Criar as filas `order-created` e `order-status-changed` | `modules/messaging` |
 | IAM, com escopo | Criar a role/instance profile que a EC2 usa para autenticar no ECR (`iam:CreateRole`, `PassRole`, etc., restrito a `shop-*-app-host-role`) | `modules/compute` |
 | ECR (`push`/`pull`) | Publicar as imagens dos 4 serviços | `deploy.yml`, indiretamente a EC2 |
+| ECR, ao nível do registo (`ecr:PutReplicationConfiguration`) | Ativar a replicação cross-region das imagens para a região de DR. É uma ação de *registry*, não de repositório — o `Resource` tem de ser `*` | `modules/ecr` (`aws_ecr_replication_configuration`) |
+| SSM Parameter Store (`ssm:PutParameter`, `GetParameter(s)`, `AddTagsToResource`, `DeleteParameter`) + KMS (`kms:Decrypt`, `GenerateDataKey`) via `kms:ViaService=ssm.*.amazonaws.com` | Criar/ler os parâmetros `SecureString` com as credenciais da BD em `/shop/<env>/db/*`, em cada região | `modules/secrets` |
 
 ## Comandos para recriar as permissões do zero
 
@@ -105,6 +107,55 @@ aws iam put-role-policy \
   --role-name gha-deployer \
   --policy-name app-host-iam-scoped \
   --policy-document file://app-host-iam-policy.json   # ver secção anterior da conversa/PR para o JSON exato
+
+# ECR replication config (faltava — apareceu como AccessDeniedException em
+# aws_ecr_replication_configuration assim que modules/ecr passou a configurar
+# replicação cross-region). É uma ação de registo, não de repositório, por
+# isso o Resource tem mesmo de ser "*".
+aws iam put-role-policy \
+  --role-name gha-deployer \
+  --policy-name ecr-replication-config \
+  --policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Effect": "Allow",
+      "Action": ["ecr:PutReplicationConfiguration", "ecr:DescribeRegistry"],
+      "Resource": "*"
+    }]
+  }'
+
+# SSM Parameter Store para as credenciais da BD (faltava — apareceu como
+# AccessDeniedException em aws_ssm_parameter.db_username/db_password assim
+# que modules/secrets foi adicionado). SecureString usa a chave gerida
+# aws/ssm por omissão, por isso as ações de KMS também são precisas,
+# restritas via kms:ViaService em vez de a um ARN de chave fixo.
+aws iam put-role-policy \
+  --role-name gha-deployer \
+  --policy-name ssm-db-secrets \
+  --policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "ssm:PutParameter", "ssm:GetParameter", "ssm:GetParameters",
+          "ssm:AddTagsToResource", "ssm:DeleteParameter"
+        ],
+        "Resource": [
+          "arn:aws:ssm:us-east-1:202373502174:parameter/shop/*/db/*",
+          "arn:aws:ssm:eu-west-1:202373502174:parameter/shop/*/db/*"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": ["kms:Decrypt", "kms:GenerateDataKey"],
+        "Resource": "*",
+        "Condition": {
+          "StringLike": { "kms:ViaService": "ssm.*.amazonaws.com" }
+        }
+      }
+    ]
+  }'
 ```
 
 ## Porque não `AdministratorAccess`

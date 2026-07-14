@@ -39,8 +39,8 @@ variable "db_multi_az" {
 
 variable "db_backup_retention_period" {
   type        = number
-  description = "Automated backup retention in days. Must be > 0 (AWS requirement) for the DR environment to create a cross-region read replica from this instance. Directly bounds the achievable RPO — see docs/dr.md."
-  default     = 7
+  description = "Automated backup retention in days. Must be > 0 (AWS requirement) for the DR environment to create a cross-region read replica from this instance. Kept at 1 (not 7) because Free Tier / sandbox AWS accounts reject higher retention periods with FreeTierRestrictionError on ModifyDBInstance/CreateDBInstance. Directly bounds the achievable RPO — see docs/dr.md."
+  default     = 1
 }
 
 variable "dr_region" {
