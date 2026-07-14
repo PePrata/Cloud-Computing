@@ -25,7 +25,7 @@ variable "environment" {
 
 variable "instance_type" {
   type        = string
-  description = "EC2 instance size for the Docker Compose app host. Default is t3.micro (Free Tier eligible in us-east-1) — see the RAM warning in bootstrap.md before running 4 Spring Boot services on it."
+  description = "EC2 instance size for the Docker Compose app host. Default is t3.micro. If your account rejects it as Free Tier ineligible despite it appearing in your account's Free Tier list, the issue is very likely a region mismatch, not the instance type itself — see docs/bootstrap.md."
   default     = "t3.micro"
 }
 

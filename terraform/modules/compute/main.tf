@@ -109,7 +109,7 @@ resource "aws_instance" "app_host" {
 
   root_block_device {
     volume_type = "gp3"
-    volume_size = 8
+    volume_size = 30
   }
 
   # t3.micro só tem 1 GB de RAM para 4 JVMs — 2 GB de swap dá margem extra
