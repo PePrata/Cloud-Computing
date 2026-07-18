@@ -5,7 +5,7 @@
 # regions. Both checks hit the same app-gateway health endpoint that
 # docker-compose already exposes.
 resource "aws_route53_health_check" "primary" {
-  fqdn              = var.primary_endpoint
+  ip_address        = var.primary_endpoint
   port              = var.health_check_port
   type              = "HTTP"
   resource_path     = var.health_check_path
@@ -15,7 +15,7 @@ resource "aws_route53_health_check" "primary" {
 }
 
 resource "aws_route53_health_check" "standby" {
-  fqdn              = var.standby_endpoint
+  ip_address        = var.standby_endpoint
   port              = var.health_check_port
   type              = "HTTP"
   resource_path     = var.health_check_path

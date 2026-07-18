@@ -11,12 +11,12 @@ variable "tags" {
 
 variable "primary_endpoint" {
   type        = string
-  description = "FQDN or IP the primary health check polls (this project passes the app host's Elastic IP)."
+  description = "IP address the primary health check polls (this project passes the app host's Elastic IP). Route 53 health checks split domain-name checks (fqdn) from IP-based checks (ip_address) — this module always uses ip_address, so a hostname here will be rejected."
 }
 
 variable "standby_endpoint" {
   type        = string
-  description = "FQDN or IP the standby health check polls (this project passes the app host's Elastic IP)."
+  description = "IP address the standby health check polls (this project passes the app host's Elastic IP). Same ip_address-only constraint as primary_endpoint above."
 }
 
 variable "health_check_port" {
