@@ -32,6 +32,16 @@ data "terraform_remote_state" "primary" {
   }
 }
 
+# The default AWS-managed key for RDS, in this (destination) region.
+# Free, no setup, already exists in every region — used instead of a
+# customer-managed key since this project doesn't need custom key
+# rotation/policy control. Cross-region encrypted read replicas need an
+# explicit key in the destination region; they cannot inherit the
+# source region's key because KMS keys are region-scoped.
+data "aws_kms_key" "rds_default" {
+  key_id = "alias/aws/rds"
+}
+
 module "vpc" {
   source       = "../../modules/vpc"
   project_name = var.project_name
@@ -87,6 +97,7 @@ module "db" {
   tags                    = var.global_tags
   is_replica              = true
   source_db_arn           = data.terraform_remote_state.primary.outputs.rds_arn
+  kms_key_id              = data.aws_kms_key.rds_default.arn
   instance_class           = "db.t4g.micro"
   backup_retention_period = var.db_backup_retention_period
 }
