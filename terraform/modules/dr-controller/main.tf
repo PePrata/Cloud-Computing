@@ -24,43 +24,20 @@ resource "aws_route53_health_check" "standby" {
   tags              = merge(var.tags, { Name = "${var.project_name}-standby-health" })
 }
 
-# ── FAILOVER DNS RECORDS ──────────────────────────────────────
-# A single failover-routed record set. Clients always resolve
-# app.<zone> and get the primary's IP while it's healthy; Route 53
-# switches to the standby's IP automatically once the primary health
-# check fails, with no controller/Lambda involvement.
-resource "aws_route53_record" "primary" {
-  zone_id = var.hosted_zone_id
-  name    = var.dns_name
-  type    = "A"
-  ttl     = 30
-  records = [var.primary_ip]
+# ── CLIENT-FACING ROUTING: OUT OF SCOPE HERE ──────────────────
+# This build does not own/delegate a public domain (see
+# docs/limitations.md), so it cannot create Route 53 failover A
+# records (aws_route53_record requires an existing hosted zone).
+# What IS fully automated below is the backend half of failover:
+# detecting the primary is down and promoting the standby database
+# with zero console interaction. In a deployment with a real domain,
+# the two aws_route53_health_check resources above are exactly what
+# a PRIMARY/SECONDARY failover_routing_policy record pair would key
+# off — adding DNS routing back is additive, not a redesign.
 
-  failover_routing_policy {
-    type = "PRIMARY"
-  }
-  set_identifier  = "primary"
-  health_check_id = aws_route53_health_check.primary.id
-}
-
-resource "aws_route53_record" "standby" {
-  zone_id = var.hosted_zone_id
-  name    = var.dns_name
-  type    = "A"
-  ttl     = 30
-  records = [var.standby_ip]
-
-  failover_routing_policy {
-    type = "SECONDARY"
-  }
-  set_identifier  = "standby"
-  health_check_id = aws_route53_health_check.standby.id
-}
-
-# ── ALARM + SNS: TRIGGERS THE ONE STEP DNS CAN'T DO ──────────
-# Route 53 already re-routes traffic on its own; this alarm exists
-# purely to trigger the RDS replica promotion, since a standby serving
-# traffic against a read-only replica would fail every write.
+# ── ALARM + SNS: TRIGGERS THE AUTOMATED PROMOTION ────────────
+# Watches the same health check data Route 53 DNS failover would use,
+# so the promotion trigger is health-check-driven either way.
 resource "aws_sns_topic" "failover" {
   name = "${var.project_name}-dr-failover"
   tags = var.tags

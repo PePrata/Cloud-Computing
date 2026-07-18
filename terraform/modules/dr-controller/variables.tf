@@ -9,34 +9,14 @@ variable "tags" {
   default     = {}
 }
 
-variable "hosted_zone_id" {
-  type        = string
-  description = "Route 53 hosted zone ID that owns the DNS failover record."
-}
-
-variable "dns_name" {
-  type        = string
-  description = "Fully-qualified DNS name clients use to reach the app (e.g. shop.example.com). Resolves to the primary IP while healthy, and to the standby IP on failover."
-}
-
-variable "primary_ip" {
-  type        = string
-  description = "Primary region app host Elastic IP."
-}
-
-variable "standby_ip" {
-  type        = string
-  description = "Standby (DR) region app host Elastic IP."
-}
-
 variable "primary_endpoint" {
   type        = string
-  description = "FQDN or IP the primary health check polls (typically the same as primary_ip)."
+  description = "FQDN or IP the primary health check polls (this project passes the app host's Elastic IP)."
 }
 
 variable "standby_endpoint" {
   type        = string
-  description = "FQDN or IP the standby health check polls (typically the same as standby_ip)."
+  description = "FQDN or IP the standby health check polls (this project passes the app host's Elastic IP)."
 }
 
 variable "health_check_port" {
