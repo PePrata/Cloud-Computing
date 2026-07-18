@@ -56,13 +56,9 @@ data "terraform_remote_state" "dr" {
 module "dr_controller" {
   source = "../../modules/dr-controller"
 
-  project_name   = var.project_name
-  tags           = var.global_tags
-  hosted_zone_id = var.hosted_zone_id
-  dns_name       = var.dns_name
+  project_name = var.project_name
+  tags         = var.global_tags
 
-  primary_ip       = data.terraform_remote_state.primary.outputs.ec2_public_ip
-  standby_ip       = data.terraform_remote_state.dr.outputs.ec2_public_ip
   primary_endpoint = data.terraform_remote_state.primary.outputs.ec2_public_ip
   standby_endpoint = data.terraform_remote_state.dr.outputs.ec2_public_ip
 
