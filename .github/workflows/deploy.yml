@@ -15,6 +15,12 @@ concurrency:
 jobs:
   deploy-stack:
     runs-on: ubuntu-latest
+    # Requires manual approval before this job starts: configure a
+    # "production" environment under Settings → Environments with at
+    # least one required reviewer. This is what gates every apply
+    # below (primary, standby, and the DR controller) behind a human
+    # sign-off, satisfying the "environment-gated deploys" requirement.
+    environment: production
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -30,13 +36,44 @@ jobs:
         with:
           terraform_version: 1.9.5
 
-      - name: Terraform Apply
+      # ── 1. PRIMARY (dev / us-east-1) ──────────────────────────
+      # Applied first: dr and dr-controller both read its remote
+      # state (rds_arn, ec2_public_ip, db credentials), so it must
+      # exist/be up to date before the next two steps run.
+      - name: "Apply: Primary environment (dev)"
         env:
           TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
           TF_VAR_key_name: ${{ secrets.EC2_KEY_NAME }}
         run: |
           cd terraform/environments/dev
+          terraform init
+          terraform apply -auto-approve
+
+      # ── 2. STANDBY (dr / eu-west-1) ───────────────────────────
+      # A parameterized instance of the primary: same modules, own
+      # region, wired to the primary's RDS instance as replication
+      # source via remote state. The eu-west-1 key pair was imported
+      # under the same name as EC2_KEY_NAME, so the same secret works
+      # here even though it's a separate resource in that region.
+      - name: "Apply: Standby environment (dr)"
+        env:
+          TF_VAR_key_name: ${{ secrets.EC2_KEY_NAME }}
+        run: |
+          cd terraform/environments/dr
+          terraform init
+          terraform apply -auto-approve
+
+      # ── 3. DR CONTROLLER (health check + CloudWatch alarm + Lambda) ─
+      # Applied last: wires together both regions' outputs into the
+      # health checks, alarm, and promotion Lambda. Must run after both
+      # 1 and 2 exist. No Route 53 DNS failover records here — no
+      # owned/delegated domain (see docs/limitations.md); the
+      # health-check-driven detection and replica promotion are still
+      # fully automated end to end.
+      - name: "Apply: DR controller (health check + failover alarm)"
+        run: |
+          cd terraform/environments/dr-controller
           terraform init
           terraform apply -auto-approve
 
@@ -60,7 +97,7 @@ jobs:
           echo "${{ secrets.ANSIBLE_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-      - name: Run Ansible Playbook Engine
+      - name: Run Ansible Playbook Engine (primary)
         run: |
           cd ansible
-          ansible-playbook -i inventory/hosts.ini playbook.yml
+          ansible-playbook -i inventory/primary/hosts.ini playbook.yml

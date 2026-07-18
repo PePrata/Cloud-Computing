@@ -1,0 +1,149 @@
+name: "DR Failover Drill"
+
+# Manually-triggered simulation of a primary-region outage. Stops the
+# primary EC2 host (the only "failure" this drill introduces), then
+# waits for the health-check-driven CloudWatch alarm to fire and the
+# Lambda to promote the standby RDS replica to a writable primary,
+# measuring the resulting RTO. No AWS Console interaction is required
+# at any point — see docs/dr.md for the corresponding manual/CLI
+# walkthrough and rollback procedure.
+#
+# This build has no owned/delegated public domain (see
+# docs/limitations.md), so there is no Route 53 DNS record to poll —
+# RTO here is measured on the piece that IS fully automated: detection
+# + database promotion. Client-facing routing (DNS/ALB/Global
+# Accelerator) would sit on top of this in a deployment with a domain.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "drill" to run a real failover drill against AWS (stops the primary EC2 host)'
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: terraform-dev
+  cancel-in-progress: false
+
+jobs:
+  failover-drill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate confirmation input
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "drill" ]; then
+            echo "::error::Input must be exactly 'drill' to run this workflow. Got: '${{ github.event.inputs.confirm }}'"
+            exit 1
+          fi
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+
+      - name: Read primary/standby identifiers from Terraform state
+        id: tf-ids
+        run: |
+          cd terraform/environments/dev
+          terraform init -input=false
+          PRIMARY_ID=$(terraform output -raw ec2_instance_id)
+
+          cd ../dr
+          terraform init -input=false
+          STANDBY_REPLICA_ID=$(terraform output -raw rds_id)
+          STANDBY_REGION=$(terraform output -raw aws_region)
+
+          echo "primary_id=$PRIMARY_ID" >> "$GITHUB_OUTPUT"
+          echo "standby_replica_id=$STANDBY_REPLICA_ID" >> "$GITHUB_OUTPUT"
+          echo "standby_region=$STANDBY_REGION" >> "$GITHUB_OUTPUT"
+
+      # RTO is measured end-to-end: from the simulated outage until the
+      # standby RDS instance is no longer a read replica of the primary
+      # AND is back in "available" status — i.e. the point at which it
+      # can actually accept writes. This is what the CloudWatch alarm →
+      # SNS → Lambda chain (module dr-controller) achieves with zero
+      # console interaction; we're just polling its result here.
+      - name: Simulate outage and measure RTO
+        id: drill
+        env:
+          PRIMARY_ID: ${{ steps.tf-ids.outputs.primary_id }}
+          STANDBY_REPLICA_ID: ${{ steps.tf-ids.outputs.standby_replica_id }}
+          STANDBY_REGION: ${{ steps.tf-ids.outputs.standby_region }}
+        run: |
+          START=$(date +%s)
+          echo "Stopping primary instance $PRIMARY_ID at $(date -u +%FT%TZ) (simulated outage)"
+          aws ec2 stop-instances --region us-east-1 --instance-ids "$PRIMARY_ID"
+
+          DEADLINE=$((START + 900))  # 15-minute safety timeout
+          STATUS=""
+          SOURCE=""
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            READ_RESULT=$(aws rds describe-db-instances \
+              --region "$STANDBY_REGION" \
+              --db-instance-identifier "$STANDBY_REPLICA_ID" \
+              --query 'DBInstances[0].[DBInstanceStatus,ReadReplicaSourceDBInstanceIdentifier]' \
+              --output text)
+            STATUS=$(echo "$READ_RESULT" | cut -f1)
+            SOURCE=$(echo "$READ_RESULT" | cut -f2)
+            echo "$(date -u +%T)  standby status=$STATUS  replica-source=${SOURCE:-none}"
+
+            if [ "$STATUS" == "available" ] && [ "$SOURCE" == "None" ]; then
+              break
+            fi
+            sleep 15
+          done
+          END=$(date +%s)
+
+          if [ "$STATUS" != "available" ] || [ "$SOURCE" != "None" ]; then
+            echo "::error::Timed out after 15 minutes waiting for $STANDBY_REPLICA_ID to be promoted (status=$STATUS, source=$SOURCE)"
+            echo "rto_seconds=timeout" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          RTO=$((END - START))
+          echo "rto_seconds=$RTO" >> "$GITHUB_OUTPUT"
+          echo "Standby promoted after ${RTO}s ($STANDBY_REPLICA_ID is now a standalone read/write instance)"
+
+      - name: Publish RTO to job summary
+        if: always()
+        env:
+          RTO: ${{ steps.drill.outputs.rto_seconds }}
+          STANDBY_REPLICA_ID: ${{ steps.tf-ids.outputs.standby_replica_id }}
+        run: |
+          {
+            echo "## DR Failover Drill Result"
+            echo ""
+            echo "| Metric | Value |"
+            echo "|---|---|"
+            echo "| Target RTO | ≤ 10 minutes |"
+            echo "| Measured RTO | ${RTO:-N/A} seconds |"
+            echo "| Promoted instance | $STANDBY_REPLICA_ID |"
+            echo ""
+            echo "No DNS failover is measured here — this build has no owned/delegated"
+            echo "domain, so client-facing routing is out of scope (see \`docs/limitations.md\`)."
+            echo "See \`docs/dr.md\` for the RTO/RPO justification and rollback procedure."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Restores the primary host so the environment is back to its
+      # normal state after the drill. This undoes only the *simulated
+      # outage* (the EC2 stop); it does not fail back the promoted
+      # replica or reset /shop/dr/status — that remains the manual
+      # procedure documented in docs/dr.md.
+      - name: Restart primary instance (undo simulated outage)
+        if: always()
+        env:
+          PRIMARY_ID: ${{ steps.tf-ids.outputs.primary_id }}
+        run: |
+          aws ec2 start-instances --region us-east-1 --instance-ids "$PRIMARY_ID"

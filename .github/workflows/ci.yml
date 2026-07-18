@@ -40,13 +40,42 @@ jobs:
         with:
           terraform_version: 1.9.5
 
-      - name: Dry-Run Verification (Lint & Plan execution)
+      # ── PRIMARY (dev / us-east-1) ─────────────────────────────
+      - name: "Plan: Primary environment (dev)"
         env:
           TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
           TF_VAR_key_name: ${{ secrets.EC2_KEY_NAME }}
         run: |
           cd terraform/environments/dev
+          terraform init
+          terraform validate
+          terraform plan -no-color
+
+      # ── STANDBY (dr / eu-west-1) ──────────────────────────────
+      # Reads the primary's remote state (rds_arn, db credentials), so
+      # this plan only reflects reality once dev has been applied at
+      # least once. The eu-west-1 region has its own key pair resource
+      # (key pairs aren't shared across regions), but it was imported
+      # under the same name as EC2_KEY_NAME, so the same secret works.
+      - name: "Plan: Standby environment (dr)"
+        env:
+          TF_VAR_key_name: ${{ secrets.EC2_KEY_NAME }}
+        run: |
+          cd terraform/environments/dr
+          terraform init
+          terraform validate
+          terraform plan -no-color
+
+      # ── DR CONTROLLER (health check + CloudWatch alarm + Lambda) ─
+      # Reads both dev's and dr's remote state, so it can only plan
+      # meaningfully once both environments above exist. No Route 53
+      # DNS records here — no owned/delegated domain (see
+      # docs/limitations.md); failover detection + replica promotion
+      # are still fully automated.
+      - name: "Plan: DR controller (health check + failover alarm)"
+        run: |
+          cd terraform/environments/dr-controller
           terraform init
           terraform validate
           terraform plan -no-color
