@@ -72,6 +72,12 @@ variable "source_db_arn" {
   default     = null
 }
 
+variable "kms_key_id" {
+  type        = string
+  description = "KMS key ARN to encrypt the replica with, in the replica's own region. Required when is_replica = true and the source is encrypted: cross-region encrypted read replicas cannot inherit the source region's key (KMS keys are region-scoped), and AWS treats a missing key here as an attempt to create an unencrypted replica from an encrypted source, which it rejects outright. Not used for the primary instance (is_replica = false)."
+  default     = null
+}
+
 variable "tags" {
   type        = map(string)
   description = "A mapping configuration block assigning resource ownership metadata metadata tags."
