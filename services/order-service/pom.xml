@@ -29,11 +29,6 @@
     
     <dependencyManagement>
         <dependencies>
-             <dependency>
-                <groupId>org.postgresql</groupId>
-                <artifactId>postgresql</artifactId>
-                <scope>runtime</scope>
-            </dependency>
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
@@ -52,6 +47,17 @@
     </dependencyManagement>
     
     <dependencies>
+        <!-- PostgreSQL JDBC driver — must be in the real <dependencies>
+             block (not dependencyManagement) to actually land on the
+             classpath. It was misplaced above, which is why order-service
+             was the only one of the three DB-backed services unable to
+             load org.postgresql.Driver at runtime. -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- Spring Boot Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -211,4 +217,3 @@
         </plugins>
     </build>
 </project>
-
