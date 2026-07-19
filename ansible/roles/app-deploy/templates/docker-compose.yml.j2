@@ -36,6 +36,9 @@ services:
       resources:
         limits:
           memory: 420m
+    depends_on:
+      user-service:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
       interval: 10s
@@ -58,6 +61,9 @@ services:
       resources:
         limits:
           memory: 420m
+    depends_on:
+      product-service:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
       interval: 10s
