@@ -12,9 +12,6 @@
   changed_when: false
 
 - name: Fetch DB credentials and standby status from SSM Parameter Store
-  # Secrets never touch the CI runner or a templated file on disk here —
-  # they're read directly on the instance via its own IAM role
-  # (app_host_ssm_read policy, scoped to this project/environment path).
   shell: "aws ssm get-parameter --name '{{ item.name }}' --with-decryption --region {{ aws_region }} --query Parameter.Value --output text"
   loop:
     - { name: "{{ ssm_parameter_prefix }}/username", var: db_username }
@@ -52,6 +49,6 @@
   no_log: true
 
 - name: Trigger Rolling Standby Stack Instantiation And Await Active Verification Signals
-  shell: "docker compose -f /opt/shop/docker-compose.yml up -d --wait --remove-orphans"
+  shell: "docker compose -f /opt/shop/docker-compose.yml up -d --pull always --wait --remove-orphans"
   async: 900   # Set maximum wait time to 900 seconds (15 minutes)
   poll: 15
