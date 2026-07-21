@@ -55,7 +55,7 @@ springdoc:
 
 logging:
   level:
-    pt.ulusofona.productservice: DEBUG
+    pt.ulusofona.productservice: INFO
     org.springframework.web: INFO
     io.awspring.cloud.sqs: INFO
 
