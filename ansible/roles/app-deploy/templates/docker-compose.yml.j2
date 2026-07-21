@@ -9,17 +9,17 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://{{ db_host }}/{{ db_name }}
       - SPRING_DATASOURCE_USERNAME={{ db_username }}
       - SPRING_DATASOURCE_PASSWORD={{ db_password }}
-      - JAVA_TOOL_OPTIONS=-Xmx160m -Xss256k -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=48m -XX:CompressedClassSpaceSize=32m
+      - JAVA_TOOL_OPTIONS=-Xmx256m -Xss256k -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=48m -XX:CompressedClassSpaceSize=32m
     deploy:
       resources:
         limits:
-          memory: 420m
+          memory: 600m
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 900s
+      start_period: 240s
     restart: always
 
   product-service:
@@ -31,11 +31,11 @@ services:
       - SPRING_DATASOURCE_USERNAME={{ db_username }}
       - SPRING_DATASOURCE_PASSWORD={{ db_password }}
       - AWS_REGION={{ aws_region }}
-      - JAVA_TOOL_OPTIONS=-Xmx160m -Xss256k -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=48m -XX:CompressedClassSpaceSize=32m
+      - JAVA_TOOL_OPTIONS=-Xmx256m -Xss256k -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=48m -XX:CompressedClassSpaceSize=32m
     deploy:
       resources:
         limits:
-          memory: 420m
+          memory: 600m
     depends_on:
       user-service:
         condition: service_started
@@ -44,7 +44,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 900s
+      start_period: 240s
     restart: always
 
   order-service:
@@ -56,11 +56,11 @@ services:
       - SPRING_DATASOURCE_USERNAME={{ db_username }}
       - SPRING_DATASOURCE_PASSWORD={{ db_password }}
       - AWS_REGION={{ aws_region }}
-      - JAVA_TOOL_OPTIONS=-Xmx160m -Xss256k -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=48m -XX:CompressedClassSpaceSize=32m
+      - JAVA_TOOL_OPTIONS=-Xmx256m -Xss256k -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=48m -XX:CompressedClassSpaceSize=32m
     deploy:
       resources:
         limits:
-          memory: 420m
+          memory: 600m
     depends_on:
       product-service:
         condition: service_started
@@ -69,7 +69,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 900s
+      start_period: 240s
     restart: always
 
   api-gateway:
@@ -80,11 +80,11 @@ services:
       - USER_SERVICE_URL=http://user-service:8081
       - PRODUCT_SERVICE_URL=http://product-service:8082
       - ORDER_SERVICE_URL=http://order-service:8083
-      - JAVA_TOOL_OPTIONS=-Xmx150m -Xss256k -XX:MaxMetaspaceSize=112m -XX:ReservedCodeCacheSize=40m -XX:CompressedClassSpaceSize=20m
+      - JAVA_TOOL_OPTIONS=-Xmx256m -Xss256k -XX:MaxMetaspaceSize=112m -XX:ReservedCodeCacheSize=40m -XX:CompressedClassSpaceSize=20m
     deploy:
       resources:
         limits:
-          memory: 350m
+          memory: 600m
     depends_on:
       user-service:
         condition: service_healthy
@@ -97,5 +97,5 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 900s
+      start_period: 240s
     restart: always
