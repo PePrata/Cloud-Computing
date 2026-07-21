@@ -52,6 +52,6 @@ springdoc:
 
 logging:
   level:
-    pt.ulusofona.userservice: DEBUG
+    pt.ulusofona.userservice: INFO
     org.springframework.web: INFO
 
