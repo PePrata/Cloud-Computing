@@ -55,6 +55,6 @@ springdoc:
 
 logging:
   level:
-    org.springframework.cloud.gateway: DEBUG
-    pt.ulusofona.apigateway: DEBUG
+    org.springframework.cloud.gateway: INFO
+    pt.ulusofona.apigateway: INFO
 
